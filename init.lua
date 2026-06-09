@@ -94,6 +94,45 @@ vim.keymap.set(
 	{ desc = "Compile and Run" }
 )
 
+-- Compile & run programs in a Kitty split pane
+vim.keymap.set("n", "<leader>r", function()
+	local file = vim.fn.expand("%:p")
+	local out = vim.fn.expand("%:p:r")
+	local dir = vim.fn.expand("%:p:h")
+	local ext = vim.fn.expand("%:e")
+	local run_cmd
+
+	if ext == "cpp" or ext == "cc" then
+		run_cmd = "g++ -std=c++17 -o "
+			.. out
+			.. " "
+			.. file
+			.. " && "
+			.. out
+			.. '; echo; read -p "Press enter to close..."'
+	elseif ext == "cs" then
+		run_cmd = "cd " .. dir .. ' && /opt/homebrew/bin/dotnet run; echo; read -p "Press enter to close..."'
+	elseif ext == "go" then
+		run_cmd = "/usr/local/go/bin/go run " .. file .. '; echo; read -p "Press enter to close..."'
+	else
+		print("No run config for filetype: " .. ext)
+		return
+	end
+
+	local cmd = "kitty @ launch --type=window --location=vsplit bash -c " .. "'cd " .. dir .. " && " .. run_cmd .. "'"
+	vim.fn.system(cmd)
+end, { desc = "Compile & run in Kitty split" })
+
+-- Cmd+Y to confirm autocomplete (same as Ctrl+Y)
+vim.keymap.set("i", "<D-y>", "<C-y>", { noremap = true, silent = true })
+
+-- Cmd+N / Cmd+P to navigate autocomplete (same as Ctrl+N / Ctrl+P)
+vim.keymap.set("i", "<D-n>", "<C-n>", { noremap = true, silent = true })
+vim.keymap.set("i", "<D-p>", "<C-p>", { noremap = true, silent = true })
+
+-- Cmd+E to dismiss autocomplete (same as Ctrl+E)
+vim.keymap.set("i", "<D-e>", "<C-e>", { noremap = true, silent = true })
+
 -- Diagnostic Config & Keymaps
 -- See :help vim.diagnostic.Opts
 vim.diagnostic.config({
@@ -556,6 +595,7 @@ require("lazy").setup({
 				gopls = {},
 				pyright = {},
 				rust_analyzer = {},
+				csharp_ls = {},
 				--
 				-- Some languages (like typescript) have entire language plugins that can be useful:
 				--    https://github.com/pmizio/typescript-tools.nvim
@@ -721,7 +761,11 @@ require("lazy").setup({
 				-- <c-k>: Toggle signature help
 				--
 				-- See :h blink-cmp-config-keymap for defining your own keymap
+
 				preset = "default",
+
+				["<Tab>"] = { "fallback" },
+				["<S-Tab>"] = { "fallback" },
 
 				-- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
 				--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
