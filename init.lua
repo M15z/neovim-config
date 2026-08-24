@@ -25,13 +25,13 @@ vim.o.mouse = "a"
 vim.o.showmode = false
 
 -- Sync clipboard between OS and Neovim.
---  Schedule the setting after `UiEnter` because it can increase startup-time.
---  Remove this option if you want your OS clipboard to remain independent.
---  See `:help 'clipboard'`
 vim.schedule(function()
 	vim.o.clipboard = "unnamedplus"
 end)
-
+--  Schedule the setting after `UiEnter` because it can increase startup-time.
+--  Remove this option if you want your OS clipboard to remain independent.
+--  See `:help 'clipboard'`
+--
 -- Enable break indent
 vim.o.breakindent = true
 
@@ -93,6 +93,42 @@ vim.keymap.set(
 	":split | terminal g++ -std=c++17 % -o /tmp/out && /tmp/out<CR>",
 	{ desc = "Compile and Run" }
 )
+
+-- Compile & run C++ in a tmux split pane
+vim.keymap.set("n", "<leader>r", function()
+	local file = vim.fn.expand("%:p")
+	local out = vim.fn.expand("%:p:r")
+	local dir = vim.fn.expand("%:p:h")
+	local ext = vim.fn.expand("%:e")
+	local run_cmd
+
+	if ext == "cpp" or ext == "cc" then
+		run_cmd = "g++ -std=c++17 -o "
+			.. out
+			.. " "
+			.. file
+			.. " && "
+			.. out
+			.. '; echo; read -p "Press enter to close..."'
+	elseif ext == "cs" then
+		run_cmd = "cd " .. dir .. ' && dotnet run; echo; read -p "Press enter to close..."'
+	elseif ext == "go" then
+		run_cmd = "cd " .. dir .. " && go run " .. file .. '; echo; read -p "Press enter to close..."'
+	else
+		print("No run config for filetype: " .. ext)
+		return
+	end
+
+	local cmd = string.format("tmux split-window -v '%s'", run_cmd)
+	vim.fn.system(cmd)
+end, { desc = "Compile & run in tmux split" })
+
+vim.keymap.set("n", "x", '"_x')
+vim.keymap.set("v", "x", '"_x')
+
+vim.keymap.set("n", "y", '"+y')
+vim.keymap.set("v", "y", '"+y')
+vim.keymap.set("n", "Y", '"+Y')
 
 -- Diagnostic Config & Keymaps
 -- See :help vim.diagnostic.Opts
@@ -555,6 +591,7 @@ require("lazy").setup({
 				clangd = {},
 				gopls = {},
 				pyright = {},
+				omnisharp = {},
 				rust_analyzer = {},
 				--
 				-- Some languages (like typescript) have entire language plugins that can be useful:
@@ -613,6 +650,18 @@ require("lazy").setup({
 			})
 
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+			vim.lsp.config("omnisharp", {
+				cmd = {
+					"/home/mohd/.local/share/nvim/mason/bin/OmniSharp",
+					"-z",
+					"--hostPID",
+					tostring(vim.fn.getpid()),
+					"DotNet:enablePackageRestore=false",
+					"--encoding",
+					"utf-8",
+					"--languageserver",
+				},
+			})
 
 			for name, server in pairs(servers) do
 				vim.lsp.config(name, server)
